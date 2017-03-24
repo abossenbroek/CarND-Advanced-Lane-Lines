@@ -1,4 +1,4 @@
-from LaneFinding.camera_calibration import camera_calibration
+from lane_finding.camera_calibration import camera_calibration
 
 
 def main():

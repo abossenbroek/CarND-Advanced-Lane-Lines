@@ -101,4 +101,4 @@ def isolate_lanes(img):
     yellow_msk = yellow_thresh(img)
 
     lanes = cv2.bitwise_or(c_sobol_msk, cv2.bitwise_or(white_msk, yellow_msk))
-    return lanes
+    return lanes, white_msk, yellow_msk
