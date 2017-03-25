@@ -4,25 +4,35 @@ import cv2
 from moviepy.editor import VideoFileClip
 import os.path
 import pickle
+import matplotlib.pyplot as plt
 
 DISTORT_MATRIX_FN = "distort_matrix.p"
 
 mtx = None
+dst = None
 road_M = None
 inv_road_M = None
 lane = lf.Lane()
 
 def find_lane(img):
     global mtx
+    global dst
     global road_M
     global inv_road_M
     global lane
 
     # Let us first correct the image distortion caused by the camera.
-    undist_img = lf.perspective_correct(img, mtx)
+    undist_img = cv2.undistort(img, mtx, dst, None, mtx)
     persp_corr_img = lf.perspective_correct(undist_img, road_M)
+    cv2.imwrite('persp_corr.png', persp_corr_img)
     bin_img, white_msk, yellow_msk = lf.isolate_lanes(persp_corr_img)
     left_fitx, right_fitx, ploty, fit_img = lane.find_smooth_lanes(bin_img, yellow_msk, white_msk)
+    plt.imshow(bin_img)
+    plt.savefig('bin.png')
+    plt.imshow(white_msk)
+    plt.savefig('white_msk.png')
+    plt.imshow(yellow_msk)
+    plt.savefig('yellow_msk.png')
     polygon = lf.draw_polygon(persp_corr_img, ploty, left_fitx, right_fitx)
     # Change the polygon with detected lanes back to our original road perspective.
     polygon = lf.perspective_correct(polygon, inv_road_M)
@@ -67,10 +77,14 @@ def main():
 
     print("About to process movie")
 
-    white_output = 'project_video_out_five.mp4'
-    clip1 = VideoFileClip("project_video.mp4").subclip(38, 45)
-    white_clip = clip1.fl_image(find_lane)  # NOTE: this function expects color images!!
-    white_clip.write_videofile(white_output, audio=False)
+    #white_output = 'project_video_out_five.mp4'
+    #clip1 = VideoFileClip("project_video.mp4").subclip(38, 39)
+    #white_clip = clip1.fl_image(find_lane)  # NOTE: this function expects color images!!
+    #white_clip.write_videofile(white_output, audio=False)
+
+    test_img = cv2.imread("test_images/straight_lines1.jpg")
+    res = find_lane(test_img)
+    cv2.imwrite("result.png", res)
 
 
 if __name__ == "__main__":

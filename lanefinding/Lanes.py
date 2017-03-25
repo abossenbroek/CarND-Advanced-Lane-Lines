@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 
+import matplotlib.pyplot as plt
 
 class Lane:
 
@@ -22,17 +23,8 @@ class Lane:
             lanes = cv2.bitwise_and(yellow_bin, white_bin)
             hist_col = np.sum(lanes[lanes.shape[0] / 2:, :], axis=0)
             midpoint_col = np.int(hist_col.shape[0] / 2)
-            leftx_base_col = np.argmax(hist_col[:midpoint_col])
-            rightx_base_col = np.argmax(hist_col[midpoint_col:]) + midpoint_col
-            # We don't know where the lanes are so we will create histograms
-            # and select the two peaks.
-            histogram = np.sum(bin_img[bin_img.shape[0] / 2:, :], axis=0)
-            midpoint = np.int(histogram.shape[0] / 2)
-            leftx_base = np.argmax(histogram[:midpoint])
-            rightx_base = np.argmax(histogram[midpoint:]) + midpoint
-
-            final_leftx = np.int((leftx_base_col + leftx_base) / 2)
-            final_rightx = np.int((rightx_base_col + rightx_base) / 2)
+            final_leftx = np.argmax(hist_col[:midpoint_col])
+            final_rightx = np.argmax(hist_col[midpoint_col:]) + midpoint_col
 
             self.prev_start = [final_leftx, final_rightx]
 
@@ -114,6 +106,7 @@ class Lane:
         out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
         out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
 
+
         return [left_fit, right_fit, out_img]
 
     def find_smooth_lanes(self, bin_img, yellow_bin, white_bin):
@@ -162,8 +155,8 @@ class Lane:
         self.right_poly = right_fit
 
         # Plot the dots on the image
-        fit_img[np.int_(left_fitx), np.int_(ploty)] = [255, 0, 0]
-        fit_img[np.int_(right_fitx), np.int_(ploty)] = [0, 0, 255]
+        #fit_img[np.int_(left_fitx), np.int_(ploty)] = [255, 0, 0]
+        #fit_img[np.int_(right_fitx), np.int_(ploty)] = [0, 0, 255]
 
         return [left_fitx, right_fitx, ploty, fit_img]
 
