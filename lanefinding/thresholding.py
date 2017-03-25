@@ -25,7 +25,7 @@ def combined_sobel_thresh(img, abs_kernel=3, abs_thresh_x=(0, 255),
                           abs_thresh_y=(0, 255),
                           mag_kernel=3, mag_thresh=(0, 255),
                           dir_kernel=3, dir_thresh=(0, np.pi/2)):
-    hsv2 = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)[:, :, 2]
+    hsv2 = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)[:, :, 2]
     x_sobel_mask, x_sobel = abs_sobel_thresh(hsv2, 'x', sobel_kernel=abs_kernel,
                                              thresh=abs_thresh_x)
     y_sobel_mask, y_sobel = abs_sobel_thresh(hsv2, 'y', sobel_kernel=abs_kernel,
@@ -84,8 +84,8 @@ def white_thresh(img):
 def yellow_thresh(img):
     # Convert to HSV color space for easy yellow thresholding.
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-    lower_yellow = np.array([90, 100, 190], dtype=np.uint8)
-    upper_yellow = np.array([110, 190, 255], dtype=np.uint8)
+    lower_yellow = np.array([80, 90, 180], dtype=np.uint8)
+    upper_yellow = np.array([120, 255, 255], dtype=np.uint8)
     mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
     mask[mask > 0] = 1
     return mask

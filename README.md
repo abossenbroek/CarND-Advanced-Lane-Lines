@@ -1,35 +1,47 @@
 ## Advanced Lane Finding
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
+The goal is to perform advanced lane finding. Initial research can be found in the [notebook](https://github.com/abossenbroek/CarND-Advanced-Lane-Lines/blob/master/Advanced_Lane_finding.ipynb).
 
-In this project, your goal is to write a software pipeline to identify the lane boundaries in a video, but the main output or product we want you to create is a detailed writeup of the project.  Check out the [writeup template](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup.  
+After building the concept we continued with a module that performs all the tasks. The module
+is `lanefinding` and is called in the program `detect_lanes.py`. We will discuss specifics of the
+implementation below.
 
-Creating a great writeup:
----
-A great writeup should include the rubric points as well as your description of how you addressed each point.  You should include a detailed description of the code used in each step (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+## Pipeline implementation
+The pipeline implementation consist of a main program and a module that we specifically wrote
+for this task. 
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
+### Main program
+The main program calculates the camera distortion correction matrix and the perspective matrix required
+to change from image perspective to road perspective. It stores these matrices in a pickle for later reuse. 
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
+Then it calls the pipeline for every frame in the picture. The pipeline consists of the following steps:
+1. undistort the image for camera distortion
+2. generate a road perspective of the image
+3. isolate lanes by using Sobol thresholds as well as a yellow and white mask
+4. generate points along two polygon that represent the left and right lanes
+5. draw a polygon along the left and right lane
+6. change the polygon from road perspective to original perspective
+7. combine the polygon with the original image and add the road image as well as the information on the fitting
+8. calculate the curvature and the offset of the car
+9. add the curvature and the offset to the final image
 
-The Project
----
+All these steps leverage functions and a class in the `linefinding` module, which key aspect are explained below.
 
-The goals / steps of this project are the following:
+### LineFinding module
+The `linefinding` module is built based on observations in the [notebook](https://github.com/abossenbroek/CarND-Advanced-Lane-Lines/blob/master/Advanced_Lane_finding.ipynb).
+Some additional features were added. The first is the yellow and white mask identification. This was done by creating two files
+with typical yellow and white points. These images were loaded in numpy and respectively converted to HSV and YUV color
+space. The OpenCV function `cv2.inRange()` is used to create masks. These are combined with a bitwise and with the result
+from the Sobol thresholding.
 
-* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-* Apply a distortion correction to raw images.
-* Use color transforms, gradients, etc., to create a thresholded binary image.
-* Apply a perspective transform to rectify binary image ("birds-eye view").
-* Detect lane pixels and fit to find the lane boundary.
-* Determine the curvature of the lane and vehicle position with respect to center.
-* Warp the detected lane boundaries back onto the original image.
-* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+To reduce the impact of poor illuminated images the current implementation stacks the last 30 masks, averages them and
+performs a range to remove noise. This is after many iterations of trying to reduce the sudden changes of the polynomials.
+The first implementations used the mean of the last number of polynomials. This yielded in very poor results when we 
+calculated the curvature and the offset. The curvature is calculated by taking the mean of the polynomials of the left and
+right lane to remove potential noise.
 
-The images for camera calibration are stored in the folder called `camera_cal`.  The images in `test_images` are for testing your pipeline on single frames.  If you want to extract more test images from the videos, you can simply use an image writing method like `cv2.imwrite()`, i.e., you can read the video in frame by frame as usual, and for frames you want to save for later you can write to an image file.  
-
-To help the reviewer examine your work, please save examples of the output from each stage of your pipeline in the folder called `ouput_images`, and include a description in your writeup for the project of what each image shows.    The video called `project_video.mp4` is the video your pipeline should work well on.  
-
-The `challenge_video.mp4` video is an extra (and optional) challenge for you if you want to test your pipeline under somewhat trickier conditions.  The `harder_challenge.mp4` video is another optional challenge and is brutal!
-
-If you're feeling ambitious (again, totally optional though), don't stop there!  We encourage you to go out and take video of your own, calibrate your camera and show us how you would implement this project from scratch!
+## Possible improvements
+The algorithm currently does not remove polynomials that are ill fitted. A possible improvement could involve filtering out 
+poor fits. This could be done by inspecting the $R^2$ for example,  this is the residual of the fit. The lower the value the
+less likely the polygon is a good fit.
