@@ -24,6 +24,7 @@ class Lane:
             midpoint_col = np.int(hist_col.shape[0] / 2)
             final_leftx = np.argmax(hist_col[:midpoint_col])
             final_rightx = np.argmax(hist_col[midpoint_col:]) + midpoint_col
+            print(final_leftx, final_rightx)
 
             self.prev_start = [final_leftx, final_rightx]
 
@@ -109,7 +110,7 @@ class Lane:
 
     def find_smooth_lanes(self, bin_img):
         # Calculate the non smooth lanes first.
-        left_fit, right_fit, out_img = self.find_bin_img(bin_img)
+        left_fit, right_fit, hist_img = self.find_lanes(bin_img)
 
         # Verify whether we have too many values on the stack.
         fit_img = np.dstack((bin_img, bin_img, bin_img)) * 255
@@ -155,7 +156,7 @@ class Lane:
         #fit_img[np.int_(left_fitx), np.int_(ploty)] = [255, 0, 0]
         #fit_img[np.int_(right_fitx), np.int_(ploty)] = [0, 0, 255]
 
-        return [left_fitx, right_fitx, ploty, fit_img]
+        return [left_fitx, right_fitx, ploty, fit_img, hist_img]
 
     def curv(self, left_fitx, right_fitx, ploty):
         if len(self.hist_curv_poly) > self.HIST_VALUES:
