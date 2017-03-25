@@ -145,12 +145,12 @@ class Lane:
             if len(self.hist_right_poly) >= self.HIST_VALUES:
                 self.hist_right_poly.pop(0)
 
-            self.hist_right_poly.append(left_fit)
+            self.hist_right_poly.append(right_fit)
         elif np.isnan(self.hist_right_poly[0][0]):
             self.hist_right_poly.pop(0)
             self.hist_right_poly.append(right_fit)
 
-        right_fit = np.mean(self.hist_left_poly, axis=0)
+        right_fit = np.mean(self.hist_right_poly, axis=0)
 
         ploty = np.linspace(0, bin_img.shape[0]-1, bin_img.shape[0])
         left_fitx = (left_fit[0] * left_fit[0] * ploty +
@@ -162,8 +162,8 @@ class Lane:
         self.right_poly = right_fit
 
         # Plot the dots on the image
-        fit_img[left_fitx, ploty] = [255, 0, 0]
-        fit_img[right_fitx, ploty] = [0, 0, 255]
+        fit_img[np.int_(left_fitx), np.int_(ploty)] = [255, 0, 0]
+        fit_img[np.int_(right_fitx), np.int_(ploty)] = [0, 0, 255]
 
         return [left_fitx, right_fitx, ploty, fit_img]
 
@@ -179,20 +179,23 @@ class Lane:
 
         offset = (right_fitx[max(ploty)] - left_fitx[max(ploty)]) * 3.7 / 700
 
-        avg_fit = np.mean([self.left_poly, self.right_poly])
+        curv_fit = np.mean([self.left_poly, self.right_poly], axis=0)
 
-        x_cr = np.array(ploty * avg_fit[0] * avg_fit[0] +
-                        avg_fit[1] * ploty + avg_fit[2])
+        x_cr = np.array(ploty * curv_fit[0] * curv_fit[0] +
+                        curv_fit[1] * ploty + curv_fit[2])
         fit_cr = np.polyfit(ploty * ym_per_pix, x_cr * xm_per_pix, 2)
 
-        if np.all(abs((fit_cr - self.hist_curv_poly) /
-                      self.hist_curv_poly) <= [0.1, 0.1, 0.1]):
+        if np.all(abs((fit_cr - self.hist_curv_poly[-1]) /
+                      self.hist_curv_poly[-1]) <= [0.1, 0.1, 0.1]):
             if len(self.hist_curv_poly) >= self.HIST_VALUES:
                 self.hist_curv_poly.pop(0)
 
             self.hist_curv_poly.append(fit_cr)
+        elif np.isnan(self.hist_curv_poly[0][0]):
+            self.hist_curv_poly.pop(0)
+            self.hist_curv_poly.append(curv_fit)
 
-        fit_cr = np.mean(self.fit_cr, axis=0)
+        fit_cr = np.mean(self.hist_curv_poly, axis=0)
 
         y_eval = max(ploty)
         curvad = (((1 + (2 * fit_cr[0] * y_eval + fit_cr[1]) ** 2) ** 1.5) /
