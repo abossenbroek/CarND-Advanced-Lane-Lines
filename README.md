@@ -41,4 +41,7 @@ The first implementations used the mean of the last number of polynomials. This 
 calculated the curvature and the offset. The curvature is calculated by taking the mean of the polynomials of the left and
 right lane to remove potential noise.
 
-
+## Possible improvements
+The algorithm currently does not remove polynomials that are ill fitted. A possible improvement could involve filtering out 
+poor fits. This could be done by inspecting the $R^2$ for example,  this is the residual of the fit. The lower the value the
+less likely the polygon is a good fit.
