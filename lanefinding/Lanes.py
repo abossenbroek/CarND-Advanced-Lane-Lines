@@ -8,9 +8,9 @@ class Lane:
 
     def __init__(self):
         self.prev_start = None
-        self.hist_left_poly = [np.nan, np.nan, np.nan]
-        self.hist_right_poly = [np.nan, np.nan, np.nan]
-        self.hist_curv_poly = [np.nan, np.nan, np.nan]
+        self.hist_left_poly = [[np.nan, np.nan, np.nan]]
+        self.hist_right_poly = [[np.nan, np.nan, np.nan]]
+        self.hist_curv_poly = [[np.nan, np.nan, np.nan]]
         self.left_poly = None
         self.right_poly = None
 
@@ -127,21 +127,28 @@ class Lane:
         # Verify that none of the values have a large percentage change, if this
         # is the case pop the oldest value if necessary and push the new one
         # on the stack.
-        if np.all(abs((left_fit - self.hist_left_poly) /
-                      self.hist_left_poly) <= [0.1, 0.1, 0.1]):
+        if np.all(abs((left_fit - self.hist_left_poly[-1]) /
+                      self.hist_left_poly[-1]) <= [0.1, 0.1, 0.1]):
             if len(self.hist_left_poly) >= self.HIST_VALUES:
                 self.hist_left_poly.pop(0)
 
             self.hist_left_poly.append(left_fit)
+        # Now that we performed our first evaluation
+        elif np.isnan(self.hist_left_poly[0][0]):
+            self.hist_left_poly.pop(0)
+            self.hist_left_poly.append(left_fit)
 
-        left_fit = np.mean(self.hist_left_poly, axis=0)
+        left_fit = np.mean(np.stack(self.hist_left_poly), axis=0)
 
-        if np.all(abs((right_fit - self.hist_right_poly) /
-                      self.hist_right_poly) <= [0.1, 0.1, 0.1]):
+        if np.all(abs((right_fit - self.hist_right_poly[-1]) /
+                      self.hist_right_poly[-1]) <= [0.1, 0.1, 0.1]):
             if len(self.hist_right_poly) >= self.HIST_VALUES:
                 self.hist_right_poly.pop(0)
 
             self.hist_right_poly.append(left_fit)
+        elif np.isnan(self.hist_right_poly[0][0]):
+            self.hist_right_poly.pop(0)
+            self.hist_right_poly.append(right_fit)
 
         right_fit = np.mean(self.hist_left_poly, axis=0)
 
