@@ -16,12 +16,11 @@ class Lane:
         self.right_poly = None
 
 
-    def find_starting_point(self, bin_img, yellow_bin, white_bin):
+    def find_starting_point(self, bin_img):
         if self.prev_start is None:
             # We calculate midpoints based on color and on the complete
             # threshold.
-            lanes = cv2.bitwise_and(yellow_bin, white_bin)
-            hist_col = np.sum(lanes[lanes.shape[0] / 2:, :], axis=0)
+            hist_col = np.sum(bin_img[bin_img.shape[0] / 2:, :], axis=0)
             midpoint_col = np.int(hist_col.shape[0] / 2)
             final_leftx = np.argmax(hist_col[:midpoint_col])
             final_rightx = np.argmax(hist_col[midpoint_col:]) + midpoint_col
@@ -30,9 +29,8 @@ class Lane:
 
         return self.prev_start
 
-    def find_lanes(self, bin_img, yellow_bin, white_bin):
-        start_lanes = self.find_starting_point(bin_img, yellow_bin,
-                                               white_bin)
+    def find_lanes(self, bin_img):
+        start_lanes = self.find_starting_point(bin_img)
 
         out_img = np.dstack((bin_img, bin_img, bin_img)) * 255
 
@@ -111,8 +109,8 @@ class Lane:
 
     def find_smooth_lanes(self, bin_img, yellow_bin, white_bin):
         # Calculate the non smooth lanes first.
-        left_fit, right_fit, out_img = self.find_lanes(bin_img, yellow_bin,
-                                                       white_bin)
+        lanes = cv2.bitwise_or(cv2.bitwise_or(yellow_bin, white_bin), bin_img)
+        left_fit, right_fit, out_img = self.find_lanes(lanes)
 
         # Verify whether we have too many values on the stack.
         fit_img = np.dstack((bin_img, bin_img, bin_img)) * 255
