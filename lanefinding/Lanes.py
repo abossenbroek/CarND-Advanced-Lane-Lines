@@ -107,10 +107,9 @@ class Lane:
 
         return [left_fit, right_fit, out_img]
 
-    def find_smooth_lanes(self, bin_img, yellow_bin, white_bin):
+    def find_smooth_lanes(self, bin_img):
         # Calculate the non smooth lanes first.
-        lanes = cv2.bitwise_or(cv2.bitwise_or(yellow_bin, white_bin), bin_img)
-        left_fit, right_fit, out_img = self.find_lanes(lanes)
+        left_fit, right_fit, out_img = self.find_bin_img(bin_img)
 
         # Verify whether we have too many values on the stack.
         fit_img = np.dstack((bin_img, bin_img, bin_img)) * 255

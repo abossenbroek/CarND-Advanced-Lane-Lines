@@ -33,6 +33,8 @@ def find_lane(img):
     plt.savefig('white_msk.png')
     plt.imshow(yellow_msk)
     plt.savefig('yellow_msk.png')
+    lanes = cv2.bitwise_or(cv2.bitwise_or(yellow_msk, white_msk), bin_img)
+    left_fitx, right_fitx, ploty, fit_img = lane.find_smooth_lanes(lanes)
     polygon = lf.draw_polygon(persp_corr_img, ploty, left_fitx, right_fitx)
     # Change the polygon with detected lanes back to our original road perspective.
     polygon = lf.perspective_correct(polygon, inv_road_M)
