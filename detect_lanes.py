@@ -24,8 +24,7 @@ def find_lane(img):
     undist_img = cv2.undistort(img, mtx, dst, None, mtx)
     persp_corr_img = lf.perspective_correct(undist_img, road_M)
     bin_img, white_msk, yellow_msk = lf.isolate_lanes(persp_corr_img)
-    lanes = cv2.bitwise_or(cv2.bitwise_or(yellow_msk, white_msk), bin_img)
-    left_fitx, right_fitx, ploty, fit_img, hist_img = lane.find_smooth_lanes(lanes)
+    left_fitx, right_fitx, ploty, fit_img, hist_img = lane.find_smooth_lanes(bin_img, white_msk, yellow_msk)
     polygon = lf.draw_polygon(persp_corr_img, ploty, left_fitx, right_fitx)
     # Change the polygon with detected lanes back to our original road perspective.
     polygon = lf.perspective_correct(polygon, inv_road_M)
@@ -38,8 +37,10 @@ def find_lane(img):
     result[:hist_img.shape[0], :hist_img.shape[1]] = hist_img
     result[:persp_corr_img.shape[0], hist_img.shape[1]: hist_img.shape[1] + persp_corr_img.shape[1]] = persp_corr_img
 
-    #TODO: add curv and offset in dashboard
-    curv, offset = lane.curv(left_fitx, right_fitx, ploty)
+    offset, curv = lane.curv(left_fitx, right_fitx, ploty)
+
+    dash_str = ('curve %s km, offset %s m' % (round(curv / 1000, 1), round(offset, 2)))
+    cv2.putText(result, dash_str, (350, 700), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
     return result
 
@@ -77,7 +78,7 @@ def main():
     print("About to process movie")
 
     white_output = 'project_video_out_five.mp4'
-    clip1 = VideoFileClip("project_video.mp4").subclip(38, 39)
+    clip1 = VideoFileClip("project_video.mp4")
     white_clip = clip1.fl_image(find_lane)  # NOTE: this function expects color images!!
     white_clip.write_videofile(white_output, audio=False)
 

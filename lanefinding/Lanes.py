@@ -5,12 +5,11 @@ import matplotlib.pyplot as plt
 
 class Lane:
 
-    HIST_VALUES = 20
+    HIST_VALUES = 30
 
     def __init__(self):
         self.prev_start = None
-        self.hist_left_poly = [[np.nan, np.nan, np.nan]]
-        self.hist_right_poly = [[np.nan, np.nan, np.nan]]
+        self.hist_img = []
         self.hist_curv_poly = [[np.nan, np.nan, np.nan]]
         self.left_poly = None
         self.right_poly = None
@@ -30,8 +29,9 @@ class Lane:
 
         return self.prev_start
 
-    def find_lanes(self, bin_img):
-        start_lanes = self.find_starting_point(bin_img)
+    def find_lanes(self, sobel_msk, bin_img):
+        start_lanes = self.find_starting_point(sobel_msk)
+
 
         out_img = np.dstack((bin_img, bin_img, bin_img)) * 255
 
@@ -108,55 +108,38 @@ class Lane:
 
         return [left_fit, right_fit, out_img]
 
-    def find_smooth_lanes(self, bin_img):
-        # Calculate the non smooth lanes first.
-        left_fit, right_fit, hist_img = self.find_lanes(bin_img)
+    def find_smooth_lanes(self, sobel_msk, white_msk, yellow_msk):
+        bin_img = cv2.bitwise_or(cv2.bitwise_or(yellow_msk, white_msk), sobel_msk)
 
-        # Verify whether we have too many values on the stack.
-        fit_img = np.dstack((bin_img, bin_img, bin_img)) * 255
+        # Check whether the historical images is too large, if so, drop the oldest
+        if len(self.hist_img) >= self.HIST_VALUES:
+            self.hist_img.pop(0)
 
-        # Verify that none of the values have a large percentage change, if this
-        # is the case pop the oldest value if necessary and push the new one
-        # on the stack.
-        if np.all(abs((left_fit - self.hist_left_poly[-1]) /
-                      self.hist_left_poly[-1]) <= [0.1, 0.1, 0.1]):
-            if len(self.hist_left_poly) >= self.HIST_VALUES:
-                self.hist_left_poly.pop(0)
+        self.hist_img.append(bin_img)
 
-            self.hist_left_poly.append(left_fit)
-        # Now that we performed our first evaluation
-        elif np.isnan(self.hist_left_poly[0][0]):
-            self.hist_left_poly.pop(0)
-            self.hist_left_poly.append(left_fit)
+        avg_img = np.mean(np.stack(self.hist_img), axis=0)
 
-        left_fit = np.mean(np.stack(self.hist_left_poly), axis=0)
+        # A dot should be in two images to make the cut for the averaged mask.
+        avg_msk = cv2.inRange(avg_img, min(0.9, 2 / len(self.hist_img)), 1)
+        # Calculate the smooth lanes
+        left_fit, right_fit, out_img = self.find_lanes(sobel_msk, avg_msk)
 
-        if np.all(abs((right_fit - self.hist_right_poly[-1]) /
-                      self.hist_right_poly[-1]) <= [0.1, 0.1, 0.1]):
-            if len(self.hist_right_poly) >= self.HIST_VALUES:
-                self.hist_right_poly.pop(0)
-
-            self.hist_right_poly.append(right_fit)
-        elif np.isnan(self.hist_right_poly[0][0]):
-            self.hist_right_poly.pop(0)
-            self.hist_right_poly.append(right_fit)
-
-        right_fit = np.mean(self.hist_right_poly, axis=0)
 
         ploty = np.linspace(0, bin_img.shape[0]-1, bin_img.shape[0])
-        left_fitx = (left_fit[0] * left_fit[0] * ploty +
+        left_fitx = (left_fit[0] * ploty * ploty +
                      left_fit[1] * ploty + left_fit[2])
-        right_fitx = (right_fit[0] * right_fit[0] * ploty +
+        right_fitx = (right_fit[0] * ploty * ploty +
                       right_fit[1] * ploty + right_fit[2])
 
         self.left_poly = left_fit
         self.right_poly = right_fit
 
-        # Plot the dots on the image
-        #fit_img[np.int_(left_fitx), np.int_(ploty)] = [255, 0, 0]
-        #fit_img[np.int_(right_fitx), np.int_(ploty)] = [0, 0, 255]
+        cv2.polylines(out_img, np.int32(np.stack([left_fitx, ploty]).T.reshape(-1, 1, 2)),
+                      True, (255,255, 0), thickness=3, lineType=cv2.LINE_AA)
+        cv2.polylines(out_img, np.int32(np.stack([right_fitx, ploty]).T.reshape(-1, 1, 2)),
+                      True, (255,255, 0), thickness=3, lineType=cv2.LINE_AA)
 
-        return [left_fitx, right_fitx, ploty, fit_img, hist_img]
+        return [left_fitx, right_fitx, ploty, avg_msk, out_img]
 
     def curv(self, left_fitx, right_fitx, ploty):
         if len(self.hist_curv_poly) > self.HIST_VALUES:
@@ -168,28 +151,16 @@ class Lane:
         # bottom
         ploty = ploty[::-1]
 
-        offset = (right_fitx[max(ploty)] - left_fitx[max(ploty)]) * 3.7 / 700
+        y_eval = max(ploty)
+        offset = (right_fitx[y_eval] - left_fitx[y_eval]) * xm_per_pix
 
         curv_fit = np.mean([self.left_poly, self.right_poly], axis=0)
 
-        x_cr = np.array(ploty * curv_fit[0] * curv_fit[0] +
+        x_cr = np.array(ploty * ploty * curv_fit[0] +
                         curv_fit[1] * ploty + curv_fit[2])
         fit_cr = np.polyfit(ploty * ym_per_pix, x_cr * xm_per_pix, 2)
 
-        if np.all(abs((fit_cr - self.hist_curv_poly[-1]) /
-                      self.hist_curv_poly[-1]) <= [0.1, 0.1, 0.1]):
-            if len(self.hist_curv_poly) >= self.HIST_VALUES:
-                self.hist_curv_poly.pop(0)
-
-            self.hist_curv_poly.append(fit_cr)
-        elif np.isnan(self.hist_curv_poly[0][0]):
-            self.hist_curv_poly.pop(0)
-            self.hist_curv_poly.append(curv_fit)
-
-        fit_cr = np.mean(self.hist_curv_poly, axis=0)
-
-        y_eval = max(ploty)
-        curvad = (((1 + (2 * fit_cr[0] * y_eval + fit_cr[1]) ** 2) ** 1.5) /
+        curvad = (((1 + (2 * fit_cr[0] * y_eval *ym_per_pix + fit_cr[1]) ** 2) ** 1.5) /
                   np.absolute(2*fit_cr[0]))
 
         return [offset, curvad]
