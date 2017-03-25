@@ -82,7 +82,6 @@ def white_thresh(img):
 
 
 def yellow_thresh(img):
-    cv2.imwrite('yellow_in.png', img)
     # Convert to HSV color space for easy yellow thresholding.
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
     lower_yellow = np.array([90, 90, 180], dtype=np.uint8)
