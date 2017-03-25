@@ -77,7 +77,7 @@ def main():
 
     print("About to process movie")
 
-    white_output = 'project_video_out_five.mp4'
+    white_output = 'project_video_final.mp4'
     clip1 = VideoFileClip("project_video.mp4")
     white_clip = clip1.fl_image(find_lane)  # NOTE: this function expects color images!!
     white_clip.write_videofile(white_output, audio=False)
