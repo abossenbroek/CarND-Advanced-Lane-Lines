@@ -6,14 +6,14 @@ class Lane:
 
     HIST_VALUES = 20
 
-    def Lane(self):
+    def __init__(self):
         self.prev_start = None
-        self.hist_left_poly = [float('NaN'), float('NaN'), float('NaN')]
-        self.hist_right_poly = [float('NaN'), float('NaN'), float('NaN')]
-        self.hist_curv_poly = [float('NaN'), float('NaN'), float('NaN')]
+        self.hist_left_poly = [np.nan, np.nan, np.nan]
+        self.hist_right_poly = [np.nan, np.nan, np.nan]
+        self.hist_curv_poly = [np.nan, np.nan, np.nan]
         self.left_poly = None
         self.right_poly = None
-        return None
+
 
     def find_starting_point(self, bin_img, yellow_bin, white_bin):
         if self.prev_start is None:
@@ -38,8 +38,9 @@ class Lane:
 
         return self.prev_start
 
-    def find_lanes(self, bin_img):
-        start_lanes = self.find_starting_point(self, bin_img)
+    def find_lanes(self, bin_img, yellow_bin, white_bin):
+        start_lanes = self.find_starting_point(bin_img, yellow_bin,
+                                               white_bin)
 
         out_img = np.dstack((bin_img, bin_img, bin_img)) * 255
 
@@ -96,11 +97,6 @@ class Lane:
             if len(good_right_inds) > minpix:
                 rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
-        out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = \
-            [255, 0, 0]
-        out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = \
-            [0, 0, 255]
-
         # Concatenate the arrays of indices
         left_lane_inds = np.concatenate(left_lane_inds)
         right_lane_inds = np.concatenate(right_lane_inds)
@@ -115,11 +111,15 @@ class Lane:
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
 
+        out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
+        out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+
         return [left_fit, right_fit, out_img]
 
-    def find_smooth_lanes(self, bin_img):
+    def find_smooth_lanes(self, bin_img, yellow_bin, white_bin):
         # Calculate the non smooth lanes first.
-        left_fit, right_fit, out_img = self.find_lanes(bin_img)
+        left_fit, right_fit, out_img = self.find_lanes(bin_img, yellow_bin,
+                                                       white_bin)
 
         # Verify whether we have too many values on the stack.
         fit_img = np.dstack((bin_img, bin_img, bin_img)) * 255
@@ -160,7 +160,7 @@ class Lane:
 
         return [left_fitx, right_fitx, ploty, fit_img]
 
-    def curv(self, left_polyx, right_polyx, ploty):
+    def curv(self, left_fitx, right_fitx, ploty):
         if len(self.hist_curv_poly) > self.HIST_VALUES:
             self.hist_curv_poly.pop(0)
 
@@ -170,13 +170,13 @@ class Lane:
         # bottom
         ploty = ploty[::-1]
 
-        offset = (right_polyx[max(ploty)] - left_polyx[max(ploty)]) * 3.7 / 700
+        offset = (right_fitx[max(ploty)] - left_fitx[max(ploty)]) * 3.7 / 700
 
         avg_fit = np.mean([self.left_poly, self.right_poly])
 
         x_cr = np.array(ploty * avg_fit[0] * avg_fit[0] +
                         avg_fit[1] * ploty + avg_fit[2])
-        fit_cr = np.polyfit(ploty*ym_per_pix, x_cr*xm_per_pix, 2)
+        fit_cr = np.polyfit(ploty * ym_per_pix, x_cr * xm_per_pix, 2)
 
         if np.all(abs((fit_cr - self.hist_curv_poly) /
                       self.hist_curv_poly) <= [0.1, 0.1, 0.1]):

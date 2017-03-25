@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebResourcesPaths">
+    <contentEntries>
+      <entry url="file://$PROJECT_DIR$">
+        <entryData>
+          <resourceRoots>
+            <path value="file://$PROJECT_DIR$/output_images" />
+            <path value="file://$PROJECT_DIR$/test_images" />
+            <path value="file://$PROJECT_DIR$/examples" />
+            <path value="file://$PROJECT_DIR$/camera_cal" />
+            <path value="file://$PROJECT_DIR$/camera_calibrated" />
+          </resourceRoots>
+        </entryData>
+      </entry>
+    </contentEntries>
+  </component>
+</project>
